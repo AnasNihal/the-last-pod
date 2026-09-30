@@ -103,11 +103,16 @@ function App() {
       const id = Number((event.currentTarget as HTMLButtonElement).dataset.crew)
       if (runRef.current.phase === 'playing') abandon(runRef.current, id)
     }
+    const requestLandscape = () => {
+      const orientation = window.screen.orientation as ScreenOrientation & { lock?: (value: 'landscape') => Promise<void> }
+      if (typeof orientation.lock === 'function') orientation.lock('landscape').catch(() => undefined)
+    }
 
     const start = () => {
       held.clear()
       touchInteract = false
       resetJoystick()
+      requestLandscape()
       audio.unlock()
       audio.reset()
       audio.play('blip')
@@ -263,6 +268,11 @@ function App() {
       <div className="touch-abandon" aria-label="Abandon crew">
         {[0, 1, 2, 3].map(id => <button key={id} className="touch-button touch-crew" type="button" data-crew={id} aria-label={`Abandon crew ${id + 1}`}>{id + 1}</button>)}
       </div>
+    </div>
+    <div className="rotate-prompt" aria-hidden="true">
+      <div className="rotate-icon">↻</div>
+      <strong>ROTATE DEVICE</strong>
+      <span>Turn your phone sideways for the full pod bay.</span>
     </div>
     <p id="controls" className="sr-only">WASD or arrows or the touch joystick to move. Touch crew to recruit them. Prep 2 of 3 pod tasks: tap E at the Cafeteria wires, carry Storage fuel to the pod, or stand still holding E on the Med Bay bioscan, which also reports whether the impostor is in your line. Hold E or the touch HOLD E button to unlock doors, reset breakers during lights out, or launch the pod. Use TAP E for wires. Keys 1 through 4 or the crew buttons abandon followers. Watch for the impostor’s glitching nameplate. M or SOUND mutes, R or RESTART restarts, Enter or Space starts or plays again. The game pauses when it loses focus.</p>
     <p ref={statusRef} className="sr-only" role="status" aria-live="polite" />
