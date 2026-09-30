@@ -352,7 +352,7 @@ function titleScreen(ctx: Ctx, t: number, reduced: boolean) {
   pixelText(ctx, 'POD', left + 9 * pixelAdvance(s, true), 56, s, P.yellow, title)
   px(ctx, 'FOUR CREW. ONE POD. ONE OF THEM IS LYING.', 480, 160, 2, P.sky, { align: 'center', outline: P.ink })
   startButton(ctx, BUTTONS.start, 'PRESS ENTER', t, reduced)
-  label(ctx, 'SPACE OR CLICK ALSO STARTS · 60 SECONDS · KEYBOARD', 480, 257, 10, P.muted, 'center')
+  label(ctx, 'SPACE OR TAP ALSO STARTS · 60 SECONDS · TOUCH + KEYBOARD', 480, 257, 10, P.muted, 'center')
   sticker(ctx, 30, 276, 236, 162, 16, 'rgba(20,24,64,.92)', P.ink, 5)
   px(ctx, 'HOW TO SURVIVE', 46, 296, 2, P.amber, { outline: P.ink })
   const rules = [['RESCUE THE CREW', 'Touch them. They follow you.'], ['PREP THE POD', '2 of 3 tasks before launch.'], ['EXPOSE THE LIAR', 'Glitches, kills, bioscan.']]

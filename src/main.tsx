@@ -10,6 +10,12 @@ const controls = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowLeft'
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const statusRef = useRef<HTMLParagraphElement>(null)
+  const joystickRef = useRef<HTMLDivElement>(null)
+  const joystickKnobRef = useRef<HTMLSpanElement>(null)
+  const actionRef = useRef<HTMLButtonElement>(null)
+  const tapRef = useRef<HTMLButtonElement>(null)
+  const muteRef = useRef<HTMLButtonElement>(null)
+  const restartRef = useRef<HTMLButtonElement>(null)
   const runRef = useRef<Run>(createRun('title'))
 
   useEffect(() => {
@@ -20,6 +26,10 @@ function App() {
     canvas.height = CONFIG.height * scale
     ctx.setTransform(scale, 0, 0, scale, 0, 0)
     const held = new Set<string>()
+    const touchVector = { x: 0, y: 0 }
+    let touchInteract = false
+    let joystickPointer: number | null = null
+    let actionPointer: number | null = null
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
     let paused = document.hidden
     let previous = performance.now()
@@ -28,8 +38,76 @@ function App() {
     let frame = 0
     let lastAnnouncement = ''
 
+    const joystick = joystickRef.current!
+    const joystickKnob = joystickKnobRef.current!
+    const action = actionRef.current!
+    const tapButton = tapRef.current!
+    const muteButton = muteRef.current!
+    const restartButton = restartRef.current!
+    const resetJoystick = () => {
+      joystickPointer = null
+      touchVector.x = 0
+      touchVector.y = 0
+      joystickKnob.style.transform = 'translate(-50%, -50%)'
+    }
+    const updateJoystick = (event: PointerEvent) => {
+      const rect = joystick.getBoundingClientRect()
+      const dx = event.clientX - (rect.left + rect.width / 2)
+      const dy = event.clientY - (rect.top + rect.height / 2)
+      const radius = rect.width * .34
+      const length = Math.hypot(dx, dy)
+      const amount = length ? Math.min(1, length / radius) : 0
+      const nx = length ? dx / length : 0
+      const ny = length ? dy / length : 0
+      touchVector.x = nx * amount
+      touchVector.y = ny * amount
+      const knobX = nx * radius * amount
+      const knobY = ny * radius * amount
+      joystickKnob.style.transform = `translate(calc(-50% + ${knobX}px), calc(-50% + ${knobY}px))`
+    }
+    const joystickDown = (event: PointerEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      joystickPointer = event.pointerId
+      joystick.setPointerCapture(event.pointerId)
+      updateJoystick(event)
+    }
+    const joystickMove = (event: PointerEvent) => {
+      if (event.pointerId === joystickPointer) { event.preventDefault(); updateJoystick(event) }
+    }
+    const joystickUp = (event: PointerEvent) => {
+      if (event.pointerId === joystickPointer) { event.preventDefault(); resetJoystick() }
+    }
+    const actionDown = (event: PointerEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      actionPointer = event.pointerId
+      touchInteract = true
+      action.setPointerCapture(event.pointerId)
+      audio.unlock()
+    }
+    const actionUp = (event: PointerEvent) => {
+      if (event.pointerId === actionPointer) { event.preventDefault(); actionPointer = null; touchInteract = false }
+    }
+    const tapWire = (event: PointerEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      audio.unlock()
+      if (runRef.current.phase === 'playing') tap(runRef.current)
+    }
+    const mobileMute = () => toggleMute()
+    const mobileRestart = () => start()
+    const abandonTouch = (event: PointerEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+      const id = Number((event.currentTarget as HTMLButtonElement).dataset.crew)
+      if (runRef.current.phase === 'playing') abandon(runRef.current, id)
+    }
+
     const start = () => {
       held.clear()
+      touchInteract = false
+      resetJoystick()
       audio.unlock()
       audio.reset()
       audio.play('blip')
@@ -62,6 +140,8 @@ function App() {
     const setPaused = (value: boolean) => {
       paused = value
       held.clear()
+      touchInteract = false
+      resetJoystick()
       runRef.current.player.moving = false
       previous = performance.now()
       audio.setPaused(value)
@@ -86,9 +166,9 @@ function App() {
         visualTime += dt
         if (run.phase === 'playing') {
           advance(run, dt, {
-            x: Number(held.has('KeyD') || held.has('ArrowRight')) - Number(held.has('KeyA') || held.has('ArrowLeft')),
-            y: Number(held.has('KeyS') || held.has('ArrowDown')) - Number(held.has('KeyW') || held.has('ArrowUp')),
-            interact: held.has('KeyE'),
+            x: Math.max(-1, Math.min(1, touchVector.x + Number(held.has('KeyD') || held.has('ArrowRight')) - Number(held.has('KeyA') || held.has('ArrowLeft')))),
+            y: Math.max(-1, Math.min(1, touchVector.y + Number(held.has('KeyS') || held.has('ArrowDown')) - Number(held.has('KeyW') || held.has('ArrowUp')))),
+            interact: touchInteract || held.has('KeyE'),
           })
         } else if (run.phase !== 'title') endElapsed += dt
       }
@@ -121,6 +201,20 @@ function App() {
     window.addEventListener('focus', focus)
     document.addEventListener('visibilitychange', visibility)
     canvas.addEventListener('pointerdown', pointer)
+    joystick.addEventListener('pointerdown', joystickDown)
+    joystick.addEventListener('pointermove', joystickMove)
+    joystick.addEventListener('pointerup', joystickUp)
+    joystick.addEventListener('pointercancel', joystickUp)
+    joystick.addEventListener('lostpointercapture', resetJoystick)
+    action.addEventListener('pointerdown', actionDown)
+    action.addEventListener('pointerup', actionUp)
+    action.addEventListener('pointercancel', actionUp)
+    action.addEventListener('lostpointercapture', () => { actionPointer = null; touchInteract = false })
+    tapButton.addEventListener('pointerdown', tapWire)
+    muteButton.addEventListener('click', mobileMute)
+    restartButton.addEventListener('click', mobileRestart)
+    const abandonButtons = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-crew]'))
+    abandonButtons.forEach(button => button.addEventListener('pointerdown', abandonTouch))
     frame = requestAnimationFrame(tick)
     return () => {
       cancelAnimationFrame(frame)
@@ -130,6 +224,18 @@ function App() {
       window.removeEventListener('focus', focus)
       document.removeEventListener('visibilitychange', visibility)
       canvas.removeEventListener('pointerdown', pointer)
+      joystick.removeEventListener('pointerdown', joystickDown)
+      joystick.removeEventListener('pointermove', joystickMove)
+      joystick.removeEventListener('pointerup', joystickUp)
+      joystick.removeEventListener('pointercancel', joystickUp)
+      joystick.removeEventListener('lostpointercapture', resetJoystick)
+      action.removeEventListener('pointerdown', actionDown)
+      action.removeEventListener('pointerup', actionUp)
+      action.removeEventListener('pointercancel', actionUp)
+      tapButton.removeEventListener('pointerdown', tapWire)
+      muteButton.removeEventListener('click', mobileMute)
+      restartButton.removeEventListener('click', mobileRestart)
+      abandonButtons.forEach(button => button.removeEventListener('pointerdown', abandonTouch))
       audio.reset()
     }
   }, [])
@@ -140,7 +246,25 @@ function App() {
         THE LAST POD requires a browser with HTML canvas support.
       </canvas>
     </div>
-    <p id="controls" className="sr-only">WASD or arrows to move. Touch crew to rescue them. Prep 2 of 3 pod tasks: tap E at the Cafeteria wires, carry Storage fuel to the pod, or stand still holding E on the Med Bay bioscan, which also reports whether the impostor is in your line. Hold E to unlock doors, reset breakers during lights out, or launch the pod. Keys 1 through 4 abandon followers. Watch for the impostor’s glitching nameplate. M mutes, R restarts, Enter or Space starts or plays again. The game pauses when it loses focus.</p>
+    <div className="touch-controls" aria-label="Touch controls">
+      <div ref={joystickRef} className="joystick" role="group" aria-label="Move">
+        <span ref={joystickKnobRef} className="joystick-knob" />
+      </div>
+      <div className="touch-right">
+        <div className="touch-actions">
+          <button ref={tapRef} className="touch-button touch-tap" type="button">TAP E</button>
+          <button ref={actionRef} className="touch-button touch-hold" type="button">HOLD E</button>
+        </div>
+        <div className="touch-utility">
+          <button ref={muteRef} className="touch-button touch-small" type="button">SOUND</button>
+          <button ref={restartRef} className="touch-button touch-small" type="button">RESTART</button>
+        </div>
+      </div>
+      <div className="touch-abandon" aria-label="Abandon crew">
+        {[0, 1, 2, 3].map(id => <button key={id} className="touch-button touch-crew" type="button" data-crew={id} aria-label={`Abandon crew ${id + 1}`}>{id + 1}</button>)}
+      </div>
+    </div>
+    <p id="controls" className="sr-only">WASD or arrows or the touch joystick to move. Touch crew to recruit them. Prep 2 of 3 pod tasks: tap E at the Cafeteria wires, carry Storage fuel to the pod, or stand still holding E on the Med Bay bioscan, which also reports whether the impostor is in your line. Hold E or the touch HOLD E button to unlock doors, reset breakers during lights out, or launch the pod. Use TAP E for wires. Keys 1 through 4 or the crew buttons abandon followers. Watch for the impostor’s glitching nameplate. M or SOUND mutes, R or RESTART restarts, Enter or Space starts or plays again. The game pauses when it loses focus.</p>
     <p ref={statusRef} className="sr-only" role="status" aria-live="polite" />
   </main>
 }
