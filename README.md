@@ -18,6 +18,7 @@ Open the local URL printed by Vite. `npm run build` type-checks and creates the 
 - **1–4:** abandon the matching recruited crew member. Waiting crew are unaffected.
 - **M:** mute. **R:** fresh run. **Enter / Space:** start or play again.
 - The title START, mute toggle, and PLAY AGAIN can also be clicked.
+- **Touch devices:** use the virtual joystick to move, **TAP E** for wires, **HOLD E** for continuous interactions, and the numbered buttons to abandon followers. Sound and restart controls are also available.
 
 Rescue who you can, watch nameplates, and reach the pod on the right. One crew member is an impostor: after you stay nearby for 1.2 seconds, their nameplate periodically scrambles and their visor flickers red. Innocents never glitch.
 
