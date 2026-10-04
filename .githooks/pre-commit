@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+expected_name='Ahammed Anas Nihal'
+expected_email='108085694+AnasNihal@users.noreply.github.com'
+actual_name="$(git config user.name || true)"
+actual_email="$(git config user.email || true)"
+
+if [ "$actual_name" != "$expected_name" ] || [ "$actual_email" != "$expected_email" ]; then
+  echo "Commit blocked: Git identity must be $expected_name <$expected_email>." >&2
+  echo "Current identity: $actual_name <$actual_email>" >&2
+  exit 1
+fi

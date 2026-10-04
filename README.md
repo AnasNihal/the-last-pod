@@ -15,6 +15,26 @@ Open the local URL printed by Vite. `npm run build` type-checks and creates the 
 
 Import this repository into Vercel. The included `vercel.json` configures the Vite framework, `npm ci` install, `npm run build` build command, and `dist` output directory. No environment variables are required.
 
+## Git identity and safe pushes
+
+This repository uses the GitHub-linked identity `Ahammed Anas Nihal <108085694+AnasNihal@users.noreply.github.com>`. The repository includes commit and push hooks that block a different identity or any remote other than `AnasNihal/the-last-pod`.
+
+After cloning, enable the hooks once:
+
+```sh
+git config user.name "Ahammed Anas Nihal"
+git config user.email "108085694+AnasNihal@users.noreply.github.com"
+git config core.hooksPath .githooks
+```
+
+Check the active identity and push destination before contributing:
+
+```sh
+git config user.name
+git config user.email
+git remote -v
+```
+
 ## Play
 
 - **WASD / arrows:** move. Touch crew to recruit them; they follow your trail.
