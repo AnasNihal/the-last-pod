@@ -11,6 +11,10 @@ npm run dev
 
 Open the local URL printed by Vite. `npm run build` type-checks and creates the production bundle; `npm run preview` serves it. Requires Node.js 20.19+ or 22.12+.
 
+## Deploy to Vercel
+
+Import this repository into Vercel. The included `vercel.json` configures the Vite framework, `npm ci` install, `npm run build` build command, and `dist` output directory. No environment variables are required.
+
 ## Play
 
 - **WASD / arrows:** move. Touch crew to recruit them; they follow your trail.
